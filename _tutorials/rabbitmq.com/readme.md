@@ -7,3 +7,4 @@ go get github.com/streadway/amqp
 
 ### Contents
 - [Single Producer -> Consumer](./01_hello-world)
+- [Single Producer -> Multiple Consumers](./02_work-queues)
