@@ -17,9 +17,13 @@ go run receive_log_topic.go "kern.*" "*.critical"
 go run emit_log_topic.go "kern.info" "What is going on?"
 go run emit_log_topic.go "sh.critical" "Holy shit!"
 
+# Only one message is displayed even though it matches
+# both patterns for the second logger.
+go run emit_log_topic.go "kern.critical" "Piiiiissss"
+
 # Only hits the universal logger
-go run emit_log_topic.go "cron.fatal" "PIIIIIIIIIISSSSSSS"
-go run emit_log_topic.go "." "Shit is crazy. It's so hot in here."
+go run emit_log_topic.go "cron.fatal" "Shit is crazy"
+go run emit_log_topic.go "." "It's so hot in here."
 
 ```
 
