@@ -60,7 +60,7 @@ func handleQuoteBroadcast() {
 	forever := make(chan bool)
 
 	go func() {
-		log.Println("Waiting for new pending quotes")
+		log.Println(" [-] Waiting for new pending quotes")
 
 		for req := range pendingQuoteReqs {
 			go generateAndPublishQuote(req, ch)
@@ -71,9 +71,9 @@ func handleQuoteBroadcast() {
 }
 
 func generateAndPublishQuote(req string, ch *amqp.Channel) {
-	log.Println("New pending quote request")
+	log.Println(" [.] New pending quote request")
 	resp := generateQuote(req)
-	log.Printf("Got a response: %+v", resp)
+	log.Printf(" [.] Got a response: %+v", resp)
 
 	err := ch.Publish(
 		"quote_broadcast", // exchange
@@ -86,7 +86,7 @@ func generateAndPublishQuote(req string, ch *amqp.Channel) {
 		})
 	failOnError(err, "Failed to publish a message")
 
-	log.Printf("Broadcast update for %s", resp.stock)
+	log.Printf(" [↑] Broadcast update for %s", resp.stock)
 }
 
 func generateQuote(s string) quote {
@@ -96,7 +96,7 @@ func generateQuote(s string) quote {
 	// Inject a random 0->3 sec delay
 	delayPeriod := time.Second * time.Duration(rand.Intn(4))
 	delayTimer := time.NewTimer(delayPeriod)
-	log.Printf("Waiting for %.0f sec", delayPeriod.Seconds())
+	log.Printf(" [-] Waiting for %.0f sec", delayPeriod.Seconds())
 	<-delayTimer.C
 
 	return quote{
@@ -148,10 +148,10 @@ func handleQuoteRequest() {
 	forever := make(chan bool)
 
 	go func() {
-		log.Println("Monitoring quote_req queue")
+		log.Println(" [-] Monitoring quote_req queue")
 
 		for d := range msgs {
-			log.Printf("Received a quote request: %s", d.Body)
+			log.Printf(" [↓] Received a quote request: %s", d.Body)
 			pendingQuoteReqs <- string(d.Body)
 			d.Ack(false)
 		}
