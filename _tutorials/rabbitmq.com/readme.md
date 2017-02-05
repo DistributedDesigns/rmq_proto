@@ -11,3 +11,4 @@ go get github.com/streadway/amqp
 - [Publish / Subscribe Pattern](./03_pub-sub)
 - [Managing subscriptions with routing](./04_routing)
 - [Managing subscriptions with topics](./05_topics)
+- [RPC with callback queues](./06_rpc)
