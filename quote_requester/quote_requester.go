@@ -30,6 +30,41 @@ var (
 	ch   *amqp.Channel
 )
 
+func initRMQ() {
+	var err error
+	conn, err = amqp.Dial(rabbitConnection)
+	failOnError(err, "Failed to connect to RabbitMQ")
+	// closed in main()
+
+	ch, err = conn.Channel()
+	failOnError(err, "Failed to open a channel")
+	// closed in main()
+
+	// Ensure all of our standard queues exist.
+	// For sending requests
+	_, err = ch.QueueDeclare(
+		quoteReqQ, // name
+		true,      // durable
+		false,     // delete when unused
+		false,     // exclusive
+		false,     // no wait
+		nil,       // arguments
+	)
+	failOnError(err, "Failed to declare a queue")
+
+	// For listening to quote updates
+	err = ch.ExchangeDeclare(
+		quoteBroadcastQ,    // name
+		amqp.ExchangeTopic, // type
+		true,               // durable
+		false,              // auto-deleted
+		false,              // internal
+		false,              // no-wait
+		nil,                // args
+	)
+	failOnError(err, "Failed to declare an exchange")
+}
+
 func stocksFrom(args []string) []string {
 	var s []string
 	if (len(args) < 2) || os.Args[1] == "" {
@@ -107,38 +142,7 @@ func watchForQuoteUpdate(stock string, updates chan<- string, ready chan<- bool)
 func main() {
 	rand.Seed(time.Now().Unix())
 
-	var err error
-	conn, err = amqp.Dial(rabbitConnection)
-	failOnError(err, "Failed to connect to RabbitMQ")
-	defer conn.Close()
-
-	ch, err = conn.Channel()
-	failOnError(err, "Failed to open a channel")
-	defer ch.Close()
-
-	// Ensure all of our standard queues exist.
-	// For sending requests
-	_, err = ch.QueueDeclare(
-		quoteReqQ, // name
-		true,      // durable
-		false,     // delete when unused
-		false,     // exclusive
-		false,     // no wait
-		nil,       // arguments
-	)
-	failOnError(err, "Failed to declare a queue")
-
-	// For listening to quote updates
-	err = ch.ExchangeDeclare(
-		quoteBroadcastQ,    // name
-		amqp.ExchangeTopic, // type
-		true,               // durable
-		false,              // auto-deleted
-		false,              // internal
-		false,              // no-wait
-		nil,                // args
-	)
-	failOnError(err, "Failed to declare an exchange")
+	initRMQ()
 
 	stocks := stocksFrom(os.Args)
 	log.Println(" [.] Getting updates for", stocks)
@@ -153,4 +157,7 @@ func main() {
 	for a := 0; a < len(stocks); a++ {
 		log.Println(" [x] Got update for", <-updates)
 	}
+
+	ch.Close()
+	conn.Close()
 }
