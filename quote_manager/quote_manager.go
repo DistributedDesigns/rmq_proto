@@ -81,8 +81,9 @@ func generateAndPublishQuote(req string, ch *amqp.Channel) {
 		false,             // mandatory
 		false,             // immediate
 		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        []byte(resp.String()),
+			ContentType:   "text/plain",
+			CorrelationId: resp.userID,
+			Body:          []byte(resp.String()),
 		})
 	failOnError(err, "Failed to publish a message")
 
@@ -93,8 +94,14 @@ func generateQuote(s string) quote {
 	// assume this parses nicely
 	request := strings.Split(s, ",")
 
-	// Inject a random 0->3 sec delay
-	delayPeriod := time.Second * time.Duration(rand.Intn(4))
+	var delayPeriod time.Duration
+	if request[1] == "SLOW" {
+		// Always give a slow response for this stock
+		delayPeriod = time.Second * 20
+	} else {
+		// Inject a random 0->3 sec delay
+		delayPeriod = time.Second * time.Duration(rand.Intn(4))
+	}
 	delayTimer := time.NewTimer(delayPeriod)
 	log.Printf(" [-] Waiting for %.0f sec", delayPeriod.Seconds())
 	<-delayTimer.C
