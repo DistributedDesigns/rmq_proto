@@ -87,7 +87,7 @@ func requestQuote(stock string, ready <-chan bool) {
 		false,     // immediate
 		amqp.Publishing{
 			ContentType: "text/plain",
-			Body:        []byte(userID + "," + stock),
+			Body:        []byte(stock + "," + userID),
 		})
 	failOnError(err, "Failed to publish a message")
 }

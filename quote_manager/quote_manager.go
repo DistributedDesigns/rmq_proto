@@ -27,8 +27,8 @@ var (
 )
 
 type quote struct {
-	userID string
 	stock  string
+	userID string
 	price  float32
 }
 
@@ -91,11 +91,11 @@ func generateAndPublishQuote(req string, ch *amqp.Channel) {
 }
 
 func generateQuote(s string) quote {
-	// assume this parses nicely
+	// assume this parses nicely as stock,userID
 	request := strings.Split(s, ",")
 
 	var delayPeriod time.Duration
-	if request[1] == "SLOW" {
+	if request[0] == "SLOW" {
 		// Always give a slow response for this stock
 		delayPeriod = time.Second * 20
 	} else {
@@ -107,8 +107,8 @@ func generateQuote(s string) quote {
 	<-delayTimer.C
 
 	return quote{
-		userID: request[0],
-		stock:  request[1],
+		stock:  request[0],
+		userID: request[1],
 		price:  1000 * rand.Float32(),
 	}
 }
