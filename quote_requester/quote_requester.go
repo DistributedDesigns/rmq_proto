@@ -5,6 +5,8 @@ import (
 	"log"
 	"math/rand"
 	"os"
+	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/streadway/amqp"
@@ -23,11 +25,13 @@ const (
 	userID           = "jappleseed"
 	quoteReqQ        = "quote_req"
 	quoteBroadcastQ  = "quote_broadcast"
+	serviceID        = "worker-01"
 )
 
 var (
-	conn *amqp.Connection
-	ch   *amqp.Channel
+	conn          *amqp.Connection
+	ch            *amqp.Channel
+	transactionID int64
 )
 
 func initRMQ() {
@@ -80,14 +84,25 @@ func requestQuote(stock string, ready <-chan bool) {
 	// hold for update watcher
 	<-ready
 	log.Println(" [↑] Requesting quote for", stock)
+
+	currentTrasactionID := atomic.AddInt64(&transactionID, 1)
+
+	header := amqp.Table{
+		"transactionID": currentTrasactionID,
+		"serviceID":     serviceID,
+		"userID":        userID,
+	}
+
 	err := ch.Publish(
 		"",        // exchange
 		quoteReqQ, // routing key
 		false,     // mandatory
 		false,     // immediate
 		amqp.Publishing{
-			ContentType: "text/plain",
-			Body:        []byte(stock + "," + userID),
+			Headers:       header,
+			CorrelationId: strconv.FormatInt(currentTrasactionID, 10),
+			ContentType:   "text/plain",
+			Body:          []byte(stock + "," + userID),
 		})
 	failOnError(err, "Failed to publish a message")
 }
@@ -128,7 +143,7 @@ func watchForQuoteUpdate(stock string, updates chan<- string, ready chan<- bool)
 	log.Println(" [-] Waiting for updates to", stock)
 	ready <- true
 	for d := range msgs {
-		if d.CorrelationId == userID {
+		if d.Headers["userID"] == userID {
 			log.Printf(" [↓] Received: %s", d.Body)
 		} else {
 			log.Printf(" [↙] Intercepted: %s", d.Body)

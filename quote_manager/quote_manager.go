@@ -20,10 +20,11 @@ func failOnError(err error, msg string) {
 
 const (
 	rabbitConnection = "amqp://guest:guest@localhost:44430/"
+	serviceID        = "quoteMgr-01"
 )
 
 var (
-	pendingQuoteReqs = make(chan string)
+	pendingQuoteReqs = make(chan amqp.Delivery)
 )
 
 type quote struct {
@@ -70,10 +71,16 @@ func handleQuoteBroadcast() {
 	<-forever
 }
 
-func generateAndPublishQuote(req string, ch *amqp.Channel) {
+func generateAndPublishQuote(req amqp.Delivery, ch *amqp.Channel) {
 	log.Println(" [.] New pending quote request")
-	resp := generateQuote(req)
+	resp := generateQuote(string(req.Body))
 	log.Printf(" [.] Got a response: %+v", resp)
+
+	header := amqp.Table{
+		"serviceID":     serviceID,
+		"transactionID": req.Headers["transactionID"],
+		"userID":        req.Headers["userID"],
+	}
 
 	err := ch.Publish(
 		"quote_broadcast", // exchange
@@ -81,8 +88,9 @@ func generateAndPublishQuote(req string, ch *amqp.Channel) {
 		false,             // mandatory
 		false,             // immediate
 		amqp.Publishing{
+			Headers:       header,
 			ContentType:   "text/plain",
-			CorrelationId: resp.userID,
+			CorrelationId: req.CorrelationId,
 			Body:          []byte(resp.String()),
 		})
 	failOnError(err, "Failed to publish a message")
@@ -159,7 +167,7 @@ func handleQuoteRequest() {
 
 		for d := range msgs {
 			log.Printf(" [↓] Received a quote request: %s", d.Body)
-			pendingQuoteReqs <- string(d.Body)
+			pendingQuoteReqs <- d
 			d.Ack(false)
 		}
 	}()
