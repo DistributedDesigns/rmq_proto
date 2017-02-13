@@ -122,7 +122,7 @@ func watchForQuoteUpdate(stock string, updates chan<- string, ready chan<- bool)
 
 	err = ch.QueueBind(
 		q.Name,          // name
-		stock,           // routing key
+		stock+".*",      // routing key
 		quoteBroadcastQ, // exchange
 		false,           // no-wait
 		nil,             // args
