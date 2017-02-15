@@ -94,7 +94,7 @@ func requestQuote(stock string, ready <-chan bool) {
 	}
 
 	// serialized QuoteRequest, cached response allowed
-	quoteRequest := fmt.Sprintf("%s,%s,true", stock, userID)
+	quoteRequest := fmt.Sprintf("%s,%s,true,%d", stock, userID, currentTrasactionID)
 
 	err := ch.Publish(
 		"",        // exchange
