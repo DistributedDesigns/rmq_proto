@@ -93,6 +93,9 @@ func requestQuote(stock string, ready <-chan bool) {
 		"userID":        userID,
 	}
 
+	// serialized QuoteRequest, cached response allowed
+	quoteRequest := fmt.Sprintf("%s,%s,true", stock, userID)
+
 	err := ch.Publish(
 		"",        // exchange
 		quoteReqQ, // routing key
@@ -102,7 +105,7 @@ func requestQuote(stock string, ready <-chan bool) {
 			Headers:       header,
 			CorrelationId: strconv.FormatInt(currentTrasactionID, 10),
 			ContentType:   "text/plain",
-			Body:          []byte(stock + "," + userID),
+			Body:          []byte(quoteRequest),
 		})
 	failOnError(err, "Failed to publish a message")
 }
